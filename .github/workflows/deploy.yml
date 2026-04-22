@@ -3,21 +3,38 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main  # main 브랜치에 푸시될 때 실행
+      - main
 
+# 권한 설정: 배포를 위해 필수
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+# 중복 실행 시 이전 작업 취소
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
 
 jobs:
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./source  # source 폴더의 내용만 배포
-          publish_branch: gh-pages
+          # source 폴더의 내용만 업로드
+          path: './source'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
