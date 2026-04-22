@@ -77,13 +77,21 @@ export class VoiceCommand {
         if (this.recognition) {
             this.recognition.stop();
         }
+        // 콜백 제거
+        this.onCommand = null;
+        this.onStatusChange = null;
+    }
+
+    destroy() {
+        this.stop();
+        this.recognition = null;
     }
 
     processCommand(transcript) {
         if (!this.onCommand) return;
 
-        const jumpPatterns = ['점프', '뛰어', 'jump'];
-        const attackPatterns = ['공격', '공격해', 'attack', '파이어볼', '발사'];
+        const jumpPatterns = ['점프', '점프해', '뛰어', '올라', 'jump', 'up'];
+        const attackPatterns = ['공격', '공격해', '발사', '빵', '탕', 'attack', 'fire', 'shoot'];
 
         for (const pattern of jumpPatterns) {
             if (transcript.includes(pattern)) {

@@ -7,6 +7,9 @@ export class TutorialScene extends Phaser.Scene {
         this.step = 0;
         this.jumpCompleted = false;
         this.attackCompleted = false;
+        this.startButton = null;
+        this.startButtonText = null;
+        this.sceneActive = true;
     }
 
     create() {
@@ -53,6 +56,9 @@ export class TutorialScene extends Phaser.Scene {
         // 진행 상태 표시
         this.showProgress();
 
+        // Scene 종료 시 정리
+        this.events.on('shutdown', this.shutdown, this);
+
         // 스킵 버튼
         const skipButton = this.add.text(width - 100, 30, 'SKIP >', {
             fontSize: '16px',
@@ -63,8 +69,18 @@ export class TutorialScene extends Phaser.Scene {
         skipButton.on('pointerover', () => skipButton.setColor('#fff'));
         skipButton.on('pointerout', () => skipButton.setColor('#a0aec0'));
         skipButton.on('pointerdown', () => {
-            this.voiceCommand.stop();
-            this.scene.start('GameScene');
+            this.cleanupAndStart('GameScene');
+        });
+    }
+
+    cleanupAndStart(sceneKey) {
+        this.sceneActive = false;
+        if (this.voiceCommand) {
+            this.voiceCommand.destroy();
+        }
+        // 음성 인식이 완전히 종료될 때까지 대기 후 씬 전환
+        this.time.delayedCall(300, () => {
+            this.scene.start(sceneKey);
         });
     }
 
@@ -93,12 +109,9 @@ export class TutorialScene extends Phaser.Scene {
             this.showSuccessEffect('공격 성공!');
             this.showProgress();
 
-            // 클릭하여 시작 안내
+            // 게임 시작 버튼 표시
             this.time.delayedCall(1000, () => {
-                this.input.on('pointerdown', () => {
-                    this.voiceCommand.stop();
-                    this.scene.start('GameScene');
-                });
+                this.showStartButton();
             });
         }
     }
@@ -122,6 +135,11 @@ export class TutorialScene extends Phaser.Scene {
     }
 
     updateMicStatus(status) {
+        // Scene이 파괴되었는지 확인
+        if (!this.sceneActive || !this.micIcon || !this.micStatus) {
+            return;
+        }
+
         const statusMap = {
             'listening': { color: 0x48bb78, text: '듣고 있어요' },
             'stopped': { color: 0xff6b6b, text: '일시 정지' },
@@ -133,5 +151,41 @@ export class TutorialScene extends Phaser.Scene {
         const info = statusMap[status] || { color: 0xff6b6b, text: '알 수 없음' };
         this.micIcon.setFillStyle(info.color);
         this.micStatus.setText(info.text);
+    }
+
+    shutdown() {
+        this.sceneActive = false;
+        if (this.voiceCommand) {
+            this.voiceCommand.destroy();
+        }
+    }
+
+    showStartButton() {
+        const { width, height } = this.cameras.main;
+
+        this.startButton = this.add.rectangle(width / 2, height / 2 + 100, 200, 60, 0x667eea)
+            .setInteractive({ useHandCursor: true })
+            .setOrigin(0.5);
+
+        this.startButtonText = this.add.text(width / 2, height / 2 + 100, '게임 시작', {
+            fontSize: '24px',
+            fontFamily: 'Arial',
+            color: '#fff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        this.startButton.on('pointerover', () => {
+            this.startButton.setFillStyle(0x5568d3);
+            this.startButton.setScale(1.05);
+        });
+
+        this.startButton.on('pointerout', () => {
+            this.startButton.setFillStyle(0x667eea);
+            this.startButton.setScale(1);
+        });
+
+        this.startButton.on('pointerdown', () => {
+            this.cleanupAndStart('GameScene');
+        });
     }
 }
